@@ -122,7 +122,7 @@ export function ColorPicker({ label, value, onChange }: ColorPickerProps) {
         type="button"
         aria-label={`${label} color`}
         aria-expanded={open}
-        className="flex w-full items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-left hover:bg-accent"
+        className="flex h-8 w-full items-center gap-2 rounded-md border bg-background px-2 text-left transition-colors hover:bg-accent"
         onClick={() => {
           setLightnessDraft(color.lightness);
           setOpen((previous) => !previous);

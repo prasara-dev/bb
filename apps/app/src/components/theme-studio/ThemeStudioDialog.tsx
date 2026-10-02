@@ -195,6 +195,8 @@ function ThemeStudioDialogBody({
   const [saveAsNew, setSaveAsNew] = useState(false);
   const [renameTarget, setRenameTarget] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [hoveredCss, setHoveredCss] = useState<string | null>(null);
+  const cssCacheRef = useRef(new Map<string, string>());
   const constraintProfile = getConstraintProfile(constraintLevel);
   const undoRef = useRef<Record<PreviewMode, ThemeStudioTokens>[]>([]);
 
@@ -207,8 +209,8 @@ function ThemeStudioDialogBody({
   );
 
   useEffect(() => {
-    previewAppThemeCss(css);
-  }, [css]);
+    previewAppThemeCss(hoveredCss ?? css);
+  }, [css, hoveredCss]);
 
   useEffect(
     () => () => {
@@ -274,12 +276,25 @@ function ThemeStudioDialogBody({
     });
   }, [loaded, pushUndo]);
 
+  const readSourceCss = useCallback(
+    async (source: StudioSource): Promise<string | null> => {
+      if (!loadThemeCss) return null;
+      const cached = cssCacheRef.current.get(source.id);
+      if (cached !== undefined) return cached;
+      const sourceCss = await loadThemeCss(source);
+      if (sourceCss !== null) cssCacheRef.current.set(source.id, sourceCss);
+      return sourceCss;
+    },
+    [loadThemeCss],
+  );
+
   const loadSource = useCallback(
     async (source: StudioSource) => {
       if (!loadThemeCss) return;
       setLoading(true);
+      setHoveredCss(null);
       try {
-        const sourceCss = await loadThemeCss(source);
+        const sourceCss = await readSourceCss(source);
         if (sourceCss === null) return;
         pushUndo();
         const light = extractTokens(sourceCss, "light");
@@ -309,7 +324,7 @@ function ThemeStudioDialogBody({
         setLoading(false);
       }
     },
-    [loadThemeCss, pushUndo],
+    [loadThemeCss, pushUndo, readSourceCss],
   );
 
   const startNew = useCallback(() => {
@@ -319,6 +334,19 @@ function ThemeStudioDialogBody({
     setSaveAsNew(false);
     setName("");
   }, [pushUndo]);
+
+  const hoverSource = useCallback(
+    (source: StudioSource) => {
+      void readSourceCss(source).then((sourceCss) => {
+        if (sourceCss !== null) setHoveredCss(sourceCss);
+      });
+    },
+    [readSourceCss],
+  );
+
+  const clearHover = useCallback(() => {
+    setHoveredCss(null);
+  }, []);
 
   const targetName =
     loaded.kind === "custom" && !saveAsNew ? loaded.id : name.trim();
@@ -379,7 +407,13 @@ function ThemeStudioDialogBody({
       <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[minmax(0,1fr)_16rem]">
         <div className="flex min-h-0 flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <DropdownMenu open={pickerOpen} onOpenChange={setPickerOpen}>
+            <DropdownMenu
+              open={pickerOpen}
+              onOpenChange={(open) => {
+                setPickerOpen(open);
+                if (!open) setHoveredCss(null);
+              }}
+            >
               <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="outline">
                   {loaded.kind === "new"
@@ -401,6 +435,8 @@ function ThemeStudioDialogBody({
                 {sources.map((source) => (
                   <DropdownMenuItem
                     key={`${source.kind}:${source.id}`}
+                    onFocus={() => hoverSource(source)}
+                    onBlur={clearHover}
                     onSelect={() => void loadSource(source)}
                   >
                     {source.name}
@@ -421,19 +457,19 @@ function ThemeStudioDialogBody({
             ) : null}
             <Button
               size="sm"
-              variant="ghost"
+              variant="outline"
               className="ml-auto"
               onClick={undo}
             >
               Undo
             </Button>
-            <Button size="sm" variant="ghost" onClick={reset}>
+            <Button size="sm" variant="outline" onClick={reset}>
               Reset
             </Button>
             {loaded.kind === "custom" && onDelete ? (
               <Button
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 className="text-destructive-text"
                 onClick={() => setConfirm("delete")}
               >
@@ -443,7 +479,7 @@ function ThemeStudioDialogBody({
             {loaded.kind === "custom" && onRename ? (
               <Button
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 onClick={() => {
                   setRenameTarget(`${loaded.id}-copy`);
                   setConfirm("rename");
@@ -455,16 +491,16 @@ function ThemeStudioDialogBody({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" onClick={randomize}>
+            <Button size="sm" onClick={randomize}>
               Randomize
             </Button>
-            <div className="flex rounded-md border p-0.5">
+            <div className="flex h-8 shrink-0 rounded-md border p-0.5">
               {(["light", "dark"] as const).map((value) => (
                 <button
                   key={value}
                   type="button"
                   className={cn(
-                    "rounded-sm px-2 py-1 text-2xs capitalize",
+                    "rounded-sm px-2 text-2xs capitalize",
                     mode === value ? "bg-accent" : "text-muted-foreground",
                   )}
                   onClick={() => setMode(value)}
@@ -490,7 +526,7 @@ function ThemeStudioDialogBody({
                 max={MAX_CONSTRAINT_LEVEL}
                 step={1}
                 value={constraintLevel}
-                className="min-w-0 flex-1"
+                className="h-8 min-w-0 flex-1 accent-primary"
                 onChange={(event) =>
                   setConstraintLevel(
                     Number(event.target.value) as ConstraintLevel,
@@ -500,6 +536,66 @@ function ThemeStudioDialogBody({
               <span className="shrink-0 text-2xs">
                 {constraintProfile.label}
               </span>
+            </div>
+
+            <div className="flex shrink-0 flex-col gap-1">
+              <div className="flex items-center gap-1.5">
+                <label
+                  htmlFor="theme-studio-name"
+                  className={cn(
+                    "shrink-0 rounded-sm px-1.5 py-0.5 text-2xs font-medium",
+                    loaded.kind === "custom" && !saveAsNew
+                      ? "bg-muted text-muted-foreground"
+                      : "bg-primary text-primary-foreground",
+                  )}
+                >
+                  {loaded.kind === "custom" && !saveAsNew
+                    ? "Theme name"
+                    : "Save as"}
+                </label>
+                <Input
+                  id="theme-studio-name"
+                  className="h-8 w-40"
+                  value={
+                    loaded.kind === "custom" && !saveAsNew ? loaded.id : name
+                  }
+                  placeholder="my-theme"
+                  readOnly={loaded.kind === "custom" && !saveAsNew}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </div>
+              {saveError || deleteError || renameError ? (
+                <p className="truncate text-2xs text-destructive-text">
+                  {saveError ?? deleteError ?? renameError}
+                </p>
+              ) : loaded.kind === "custom" && !saveAsNew ? (
+                <p className="truncate text-2xs text-muted-foreground">
+                  Saving replaces this theme in place.
+                </p>
+              ) : nameCheck && !nameCheck.success ? (
+                <p className="truncate text-2xs text-destructive-text">
+                  {nameCheck.error.issues[0]?.message ?? "Invalid theme name."}
+                </p>
+              ) : (
+                <p className="truncate text-2xs text-muted-foreground">
+                  Use letters, digits,{" "}
+                  <code className="font-mono">.&nbsp;_&nbsp;-</code>.
+                </p>
+              )}
+              {loaded.kind === "custom" ? (
+                <label className="flex items-center gap-1.5 text-2xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={saveAsNew}
+                    onChange={(event) => {
+                      const next = event.target.checked;
+                      setSaveAsNew(next);
+                      if (next) setName(`${loaded.id}-copy`);
+                    }}
+                  />
+                  Save as a new theme instead of overwriting
+                </label>
+              ) : null}
             </div>
           </div>
 
@@ -511,61 +607,6 @@ function ThemeStudioDialogBody({
         </div>
 
         <div className="flex min-h-0 flex-col gap-2">
-          <div className="space-y-1">
-            <label
-              htmlFor="theme-studio-name"
-              className={cn(
-                "inline-block rounded-sm px-1.5 py-0.5 text-2xs font-medium",
-                loaded.kind === "custom" && !saveAsNew
-                  ? "bg-muted text-muted-foreground"
-                  : "bg-primary text-primary-foreground",
-              )}
-            >
-              {loaded.kind === "custom" && !saveAsNew
-                ? "Theme name (read-only)"
-                : "Save as"}
-            </label>
-            <Input
-              id="theme-studio-name"
-              value={loaded.kind === "custom" && !saveAsNew ? loaded.id : name}
-              placeholder="my-theme"
-              readOnly={loaded.kind === "custom" && !saveAsNew}
-              onChange={(event) => setName(event.target.value)}
-            />
-            {saveError || deleteError ? (
-              <p className="text-2xs text-destructive-text">
-                {saveError ?? deleteError}
-              </p>
-            ) : loaded.kind === "custom" && !saveAsNew ? (
-              <p className="text-2xs text-muted-foreground">
-                Saving replaces this theme in place.
-              </p>
-            ) : nameCheck && !nameCheck.success ? (
-              <p className="text-2xs text-destructive-text">
-                {nameCheck.error.issues[0]?.message ?? "Invalid theme name."}
-              </p>
-            ) : (
-              <p className="text-2xs text-muted-foreground">
-                Use letters, digits,{" "}
-                <code className="font-mono">.&nbsp;_&nbsp;-</code>.
-              </p>
-            )}
-            {loaded.kind === "custom" ? (
-              <label className="flex items-center gap-1.5 text-2xs text-muted-foreground">
-                <input
-                  type="checkbox"
-                  checked={saveAsNew}
-                  onChange={(event) => {
-                    const next = event.target.checked;
-                    setSaveAsNew(next);
-                    if (next) setName(`${loaded.id}-copy`);
-                  }}
-                />
-                Save as a new theme instead of overwriting
-              </label>
-            ) : null}
-          </div>
-
           <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
             {visibleTokens.map((token) => (
               <ColorPicker

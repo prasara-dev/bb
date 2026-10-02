@@ -308,6 +308,38 @@ describe("theme studio dialog", () => {
     );
   });
 
+  it("previews a theme on hover and reverts when the menu closes", async () => {
+    const { ThemeStudioDialog } = await import("./ThemeStudioDialog");
+    const themeStyle = () =>
+      document.getElementById("bb-app-theme")?.textContent ?? "";
+
+    const { unmount } = render(
+      <ThemeStudioDialog
+        open
+        onOpenChange={vi.fn()}
+        onSave={vi.fn()}
+        sources={[{ id: "nordish", name: "nordish", kind: "custom" }]}
+        loadThemeCss={async () =>
+          ":root, .light {\n  --canvas: #abcdef;\n}\n.dark {\n  --canvas: #123456;\n}"}
+      />,
+    );
+
+    await waitFor(() => expect(themeStyle()).toContain("--canvas:"));
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: /new theme/i }), {
+      button: 0,
+    });
+    const item = await screen.findByRole("menuitem", { name: "nordish" });
+
+    fireEvent.focus(item);
+    await waitFor(() => expect(themeStyle()).toContain("#abcdef"));
+
+    fireEvent.blur(item);
+    await waitFor(() => expect(themeStyle()).not.toContain("#abcdef"));
+
+    unmount();
+  });
+
   it("leaves no pointer-events lock on body after opening and closing", async () => {
     const { ThemeStudioDialog } = await import("./ThemeStudioDialog");
     const { rerender } = render(
