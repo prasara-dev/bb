@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { CodeThemeFiles, CodeThemeSide } from "@bb/domain";
 import {
   customThemeNameSchema,
   generatePalette,
@@ -36,6 +37,7 @@ import {
 import { cn } from "@bb/shared-ui/lib/utils";
 import { clearAppThemePreview, previewAppThemeCss } from "@/lib/themes";
 import { ColorPicker } from "./ColorPicker";
+import { CodeThemeEditor } from "./CodeThemeEditor";
 import { ThemePreview } from "./ThemePreview";
 import { applyTokens, extractTokens } from "./studio-css";
 import {
@@ -134,6 +136,13 @@ export interface ThemeStudioDialogProps {
   onRename?: (from: string, to: string) => Promise<void>;
   onArchive?: (name: string) => Promise<void>;
   onRestore?: (name: string) => Promise<void>;
+  readCodeTheme?: (name: string) => Promise<CodeThemeFiles | null>;
+  writeCodeTheme?: (
+    name: string,
+    side: CodeThemeSide,
+    text: string | null,
+  ) => Promise<CodeThemeFiles>;
+  codeThemePending?: boolean;
   loadThemeCss?: (source: StudioSource) => Promise<string | null>;
   sources?: readonly StudioSource[];
   activeThemeId?: string;
@@ -184,6 +193,9 @@ function ThemeStudioDialogBody({
   renameError = null,
   onArchive,
   onRestore,
+  readCodeTheme,
+  writeCodeTheme,
+  codeThemePending = false,
   actionError = null,
 }: ThemeStudioDialogProps) {
   const [mode, setMode] = useState<PreviewMode>("dark");
@@ -200,6 +212,11 @@ function ThemeStudioDialogBody({
   >(null);
   const [saveAsNew, setSaveAsNew] = useState(false);
   const [renameTarget, setRenameTarget] = useState("");
+  const [codeThemeById, setCodeThemeById] = useState<
+    Record<string, CodeThemeFiles>
+  >({});
+  const codeThemeFiles =
+    loaded.kind === "custom" ? (codeThemeById[loaded.id] ?? null) : null;
   const [pickerOpen, setPickerOpen] = useState(false);
   const [hoveredCss, setHoveredCss] = useState<string | null>(null);
   const cssCacheRef = useRef(new Map<string, string>());
@@ -340,6 +357,19 @@ function ThemeStudioDialogBody({
     setSaveAsNew(false);
     setName("");
   }, [pushUndo]);
+
+  useEffect(() => {
+    if (loaded.kind !== "custom" || !readCodeTheme) return;
+    let cancelled = false;
+    void readCodeTheme(loaded.id).then((files) => {
+      if (!cancelled && files) {
+        setCodeThemeById((previous) => ({ ...previous, [loaded.id]: files }));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loaded, readCodeTheme]);
 
   const hoverSource = useCallback(
     (source: StudioSource) => {
@@ -662,6 +692,35 @@ function ThemeStudioDialogBody({
               >
                 {advanced ? "Hide" : "Show"} advanced tokens
               </Button>
+
+              {advanced && loaded.kind === "custom" ? (
+                readCodeTheme && writeCodeTheme ? (
+                  <CodeThemeEditor
+                    key={loaded.id}
+                    files={codeThemeFiles}
+                    pending={codeThemePending}
+                    onSave={async (side, text) => {
+                      const next = await writeCodeTheme(loaded.id, side, text);
+                      setCodeThemeById((previous) => ({
+                        ...previous,
+                        [loaded.id]: next,
+                      }));
+                    }}
+                  />
+                ) : (
+                  <p className="text-2xs text-muted-foreground">
+                    Code themes are unavailable here.
+                  </p>
+                )
+              ) : null}
+
+              {advanced && isBase ? (
+                <p className="text-2xs text-muted-foreground">
+                  Code themes live in a theme&apos;s own files, so a built-in or
+                  plugin base can only borrow its colors. Save it as a new
+                  custom theme to give it one.
+                </p>
+              ) : null}
             </div>
 
             <DialogFooter className="shrink-0 py-0">

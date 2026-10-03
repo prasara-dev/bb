@@ -80,6 +80,8 @@ import {
   useRenameCustomTheme,
   useArchiveCustomTheme,
   useRestoreCustomTheme,
+  useReadCodeTheme,
+  useWriteCodeTheme,
 } from "@/hooks/mutations/settings-mutations";
 import { ThemeStudioDialog } from "@/components/theme-studio/ThemeStudioDialog";
 import type { StudioSource } from "@/components/theme-studio/ThemeStudioDialog";
@@ -1148,6 +1150,8 @@ export function SettingsView() {
   const renameCustomThemeMutation = useRenameCustomTheme();
   const archiveCustomThemeMutation = useArchiveCustomTheme();
   const restoreCustomThemeMutation = useRestoreCustomTheme();
+  const readCodeThemeMutation = useReadCodeTheme();
+  const writeCodeThemeMutation = useWriteCodeTheme();
 
   const studioThemeSources = useMemo<StudioSource[]>(() => {
     const custom = (systemConfigQuery.data?.customThemes ?? []).map((id) => ({
@@ -1287,6 +1291,17 @@ export function SettingsView() {
             onRestore={async (themeName) => {
               await restoreCustomThemeMutation.mutateAsync(themeName);
             }}
+            codeThemePending={writeCodeThemeMutation.isPending}
+            readCodeTheme={async (themeName) =>
+              readCodeThemeMutation.mutateAsync(themeName)
+            }
+            writeCodeTheme={async (themeName, side, text) =>
+              writeCodeThemeMutation.mutateAsync({
+                themeId: themeName,
+                side,
+                text,
+              })
+            }
             loadThemeCss={loadStudioThemeCss}
             onDelete={async (themeName) => {
               await deleteCustomThemeMutation.mutateAsync(themeName);

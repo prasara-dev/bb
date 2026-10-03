@@ -5,6 +5,8 @@ import {
   type AppThemeSelection,
   type CustomThemeWrite,
   type CustomThemeRenameBody,
+  type CodeThemeFiles,
+  type CodeThemeSide,
   type ExperimentUpdates,
 } from "@bb/domain";
 import type { SystemInstallCliSkillsRequest } from "@bb/server-contract";
@@ -137,6 +139,30 @@ export function useDeleteCustomTheme() {
       errorMessage: "Failed to delete the custom theme.",
     },
     mutationFn: (themeId: string) => sdk.theme.remove(themeId),
+    onSuccess: () => {
+      invalidateSystemConfig({ queryClient });
+    },
+  });
+}
+
+export function useReadCodeTheme() {
+  return useMutation({
+    meta: { errorMessage: "Failed to read the code theme." },
+    mutationFn: (themeId: string): Promise<CodeThemeFiles | null> =>
+      sdk.theme.readCodeTheme(themeId).catch(() => null),
+  });
+}
+
+export function useWriteCodeTheme() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    meta: { errorMessage: "Failed to save the code theme." },
+    mutationFn: (input: {
+      themeId: string;
+      side: CodeThemeSide;
+      text: string | null;
+    }) => sdk.theme.writeCodeTheme(input),
     onSuccess: () => {
       invalidateSystemConfig({ queryClient });
     },
