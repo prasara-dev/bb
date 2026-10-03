@@ -32,6 +32,8 @@ app uses ~/.bb/theme/…). The folder name is the theme id.
   bb theme archive <name>        Move a theme to <theme-dir>/.trash; restorable
   bb theme restore <name>        Bring an archived theme back
   bb theme trash                 List archived themes
+  bb theme code show <id> <side> Print a code-theme sidecar (dark|light)
+  bb theme code set <id> <side> Write or --clear a code-theme sidecar
   bb theme show [id] [--css]     Print the active palette, or resolve <id> without
                                  activating it; --css dumps the CSS
   bb theme reset                 Back to the default theme; preserve favicon color

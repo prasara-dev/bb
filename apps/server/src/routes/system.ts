@@ -25,6 +25,7 @@ import {
   applyAppKeybindingOverrides,
   appSettingsSchema,
   customThemeNameSchema,
+  parseVscodeThemeJson,
   defaultAppTheme,
   isBuiltInThemeId,
   PERSONAL_PROJECT_ID,
@@ -91,6 +92,10 @@ import {
   restoreCustomTheme,
   writeCustomThemeCss,
 } from "../services/system/custom-themes.js";
+import {
+  readCodeThemeFiles,
+  writeCodeThemeFile,
+} from "../services/system/code-themes.js";
 import {
   installGlobalCliSkills,
   listInstallableMachineIds,
@@ -416,7 +421,11 @@ export function registerSystemRoutes(
       );
     }
     if (!customThemeNameSchema.safeParse(themeId).success) {
-      throw new ApiError(400, "invalid_request", `Invalid theme id '${themeId}'.`);
+      throw new ApiError(
+        400,
+        "invalid_request",
+        `Invalid theme id '${themeId}'.`,
+      );
     }
     if (readCustomThemeCss(themeRoot, themeId) === null) {
       throw new ApiError(
@@ -473,6 +482,40 @@ export function registerSystemRoutes(
     }
     deps.hub.notifySystem(["config-changed"]);
     return context.json(await buildThemeCatalog());
+  });
+
+  get(routes.readCodeThemeFiles, async (context) => {
+    const themeId = context.req.param("id");
+    await requireOwnedCustomTheme(themeId);
+    return context.json(readCodeThemeFiles(themeRoot, themeId));
+  });
+
+  put(routes.writeCodeThemeFile, async (context, payload) => {
+    const themeId = context.req.param("id");
+    await requireOwnedCustomTheme(themeId);
+    const { side, text } = payload;
+    if (text !== null) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        throw new ApiError(
+          422,
+          "invalid_code_theme",
+          `The ${side} code theme is not valid JSON.`,
+        );
+      }
+      if (parseVscodeThemeJson(parsed) === null) {
+        throw new ApiError(
+          422,
+          "invalid_code_theme",
+          `The ${side} code theme is not a valid VS Code theme.`,
+        );
+      }
+    }
+    writeCodeThemeFile(themeRoot, themeId, side, text);
+    deps.hub.notifySystem(["config-changed"]);
+    return context.json(readCodeThemeFiles(themeRoot, themeId));
   });
 
   get(routes.resolveTheme, async (context) => {

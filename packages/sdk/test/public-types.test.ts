@@ -391,10 +391,12 @@ type ExpectedThemeKey =
   | "get"
   | "remove"
   | "rename"
+  | "readCodeTheme"
   | "resolve"
   | "restore"
   | "set"
-  | "update";
+  | "update"
+  | "writeCodeTheme";
 
 type ExpectedThreadSectionsKey = "create" | "delete" | "list" | "update";
 

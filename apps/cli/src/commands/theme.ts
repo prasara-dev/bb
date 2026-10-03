@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import {
   builtInThemes,
+  codeThemeSideSchema,
   customThemeNameSchema,
   defaultAppTheme,
   defaultFaviconColor,
@@ -24,6 +25,11 @@ interface ThemeSetCommandOptions extends JsonOutputOptions {
 
 interface ThemeCreateCommandOptions extends JsonOutputOptions {
   css?: string;
+}
+
+interface ThemeCodeCommandOptions extends JsonOutputOptions {
+  jsonText?: string;
+  clear?: boolean;
 }
 
 async function readThemeCssInput(css: string | undefined): Promise<string> {
@@ -188,6 +194,71 @@ export function registerThemeCommands(
         console.log(`Deleted custom theme '${name}'`);
         console.log(`Active: ${describeTheme(catalog.active)}`);
       }),
+    );
+
+  const code = theme
+    .command("code")
+    .description("Read and write a custom theme's code-theme sidecar JSON");
+
+  code
+    .command("show <name>")
+    .description("Print the code-theme sidecar JSON for one side")
+    .argument("<side>", "dark or light")
+    .option("--json", "Print machine-readable JSON output")
+    .action(
+      action(async (name: string, side: string, opts: JsonOutputOptions) => {
+        const parsed = codeThemeSideSchema.safeParse(side);
+        if (!parsed.success) {
+          throw new Error(`Invalid side '${side}'. Expected dark or light.`);
+        }
+        const sdk = createCliBbSdk(getUrl());
+        const files = await sdk.theme.readCodeTheme(name);
+        const entry = files[parsed.data];
+        if (outputJson(opts, entry)) return;
+        if (entry.text === null) {
+          console.log(
+            entry.overriddenByManifest
+              ? `No ${parsed.data} sidecar file; theme.json declares '${entry.manifestValue}'.`
+              : `No ${parsed.data} sidecar file.`,
+          );
+          return;
+        }
+        console.log(entry.text);
+      }),
+    );
+
+  code
+    .command("set <name> <side>")
+    .description(
+      "Write a code-theme sidecar from --json-text or stdin; pass --clear to remove it",
+    )
+    .option("--json-text <text>", "Theme JSON; omit to read stdin")
+    .option("--clear", "Remove the sidecar instead of writing it")
+    .option("--json", "Print machine-readable JSON output")
+    .action(
+      action(
+        async (name: string, side: string, opts: ThemeCodeCommandOptions) => {
+          const parsed = codeThemeSideSchema.safeParse(side);
+          if (!parsed.success) {
+            throw new Error(`Invalid side '${side}'. Expected dark or light.`);
+          }
+          const sdk = createCliBbSdk(getUrl());
+          const text = opts.clear
+            ? null
+            : await readThemeCssInput(opts.jsonText);
+          const files = await sdk.theme.writeCodeTheme({
+            themeId: name,
+            side: parsed.data,
+            text,
+          });
+          if (outputJson(opts, files)) return;
+          console.log(
+            opts.clear
+              ? `Removed the ${parsed.data} code theme from '${name}'`
+              : `Wrote the ${parsed.data} code theme for '${name}'`,
+          );
+        },
+      ),
     );
 
   theme

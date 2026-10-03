@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  CUSTOM_CODE_THEME_JSON_MAX_LENGTH,
   defaultResolvedCodeTheme,
   resolvedCodeThemeSchema,
 } from "./code-theme.js";
@@ -123,6 +124,32 @@ export const customThemeRenameBodySchema = z.object({
   to: customThemeNameSchema,
 });
 export type CustomThemeRenameBody = z.infer<typeof customThemeRenameBodySchema>;
+
+export const codeThemeSideSchema = z.enum(["dark", "light"]);
+export type CodeThemeSide = z.infer<typeof codeThemeSideSchema>;
+
+export const codeThemeFileStateSchema = z.object({
+  /** Raw contents of the theme's sidecar file, or null when it has none. */
+  text: z.string().nullable(),
+  /** True when theme.json names this side, so the sidecar file is not read. */
+  overriddenByManifest: z.boolean(),
+  /** The value theme.json declares for this side, when it declares one. */
+  manifestValue: z.string().nullable(),
+});
+export type CodeThemeFileState = z.infer<typeof codeThemeFileStateSchema>;
+
+export const codeThemeFilesSchema = z.object({
+  dark: codeThemeFileStateSchema,
+  light: codeThemeFileStateSchema,
+});
+export type CodeThemeFiles = z.infer<typeof codeThemeFilesSchema>;
+
+export const codeThemeWriteSchema = z.object({
+  side: codeThemeSideSchema,
+  /** Null clears the sidecar for this side. */
+  text: z.string().max(CUSTOM_CODE_THEME_JSON_MAX_LENGTH).nullable(),
+});
+export type CodeThemeWrite = z.infer<typeof codeThemeWriteSchema>;
 
 export const defaultAppTheme: AppTheme = {
   themeId: "default",

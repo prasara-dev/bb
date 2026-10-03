@@ -64,6 +64,8 @@ import type {
   ThreadQueuedMessage,
   CustomThemeWrite,
   CustomThemeRenameBody,
+  CodeThemeWrite,
+  CodeThemeFiles,
 } from "@bb/domain";
 import {
   appSettingsUpdateSchema,
@@ -71,6 +73,7 @@ import {
   appThemeSelectionSchema,
   customThemeWriteSchema,
   customThemeRenameBodySchema,
+  codeThemeWriteSchema,
   experimentUpdatesSchema,
 } from "@bb/domain";
 import type { ProviderUsageResponse } from "@bb/host-daemon-contract";
@@ -1954,6 +1957,27 @@ export const publicApiRoutes = {
       method: "post",
       request: noRequest<PathId>(),
       response: jsonResponse<ThemeCatalogResponse>(),
+    }),
+    /**
+     * Read the code-theme sidecars beside a custom theme's theme.css. Returns
+     * the raw file text per side plus whether theme.json names that side, which
+     * would take precedence over the sidecar at render time.
+     */
+    readCodeThemeFiles: defineRoute({
+      path: "/settings/themes/:id/code-theme",
+      method: "get",
+      request: noRequest<PathId>(),
+      response: jsonResponse<CodeThemeFiles>(),
+    }),
+    /**
+     * Write or clear one code-theme sidecar. The body must be valid VS Code
+     * theme JSON; a null text removes the file.
+     */
+    writeCodeThemeFile: defineRoute({
+      path: "/settings/themes/:id/code-theme",
+      method: "put",
+      request: jsonRequest<PathId, CodeThemeWrite>(codeThemeWriteSchema),
+      response: jsonResponse<CodeThemeFiles>(),
     }),
     reloadConfig: defineRoute({
       path: "/system/config/reload",

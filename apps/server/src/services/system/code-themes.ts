@@ -1,4 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 import {
   CUSTOM_CODE_THEME_JSON_MAX_LENGTH,
@@ -6,6 +12,9 @@ import {
   formatRegisteredCodeThemeName,
   isCodeThemeFilePath,
   parseVscodeThemeJson,
+  type CodeThemeFileState,
+  type CodeThemeFiles,
+  type CodeThemeSide,
   type DeclaredCodeTheme,
   type DeclaredCodeThemeSlot,
   type UiCodeThemeDeclaration,
@@ -150,6 +159,52 @@ export function readPluginThemeCodeTheme(
     }
   }
   return declared.dark || declared.light ? declared : null;
+}
+
+export function readCodeThemeFiles(
+  themeRoot: string,
+  name: string,
+): CodeThemeFiles {
+  const themeDir = join(themeRoot, name);
+  const manifest = readThemeManifestDeclaration(themeDir);
+  const build = (side: CodeThemeSide): CodeThemeFileState => {
+    const manifestValue = manifest?.[side] ?? null;
+    let text: string | null = null;
+    try {
+      text = readFileSync(
+        join(themeDir, CONVENTION_CODE_THEME_FILES[side]),
+        "utf8",
+      );
+    } catch {
+      text = null;
+    }
+    return {
+      text,
+      overriddenByManifest: manifestValue !== null,
+      manifestValue,
+    };
+  };
+  return { dark: build("dark"), light: build("light") };
+}
+
+export function writeCodeThemeFile(
+  themeRoot: string,
+  name: string,
+  side: CodeThemeSide,
+  text: string | null,
+): void {
+  const themeDir = join(themeRoot, name);
+  const path = resolveWithinRoot(
+    themeDir,
+    CONVENTION_CODE_THEME_FILES[side],
+    `codeTheme.${side}`,
+  );
+  if (text === null) {
+    rmSync(path, { force: true });
+    return;
+  }
+  mkdirSync(themeDir, { recursive: true });
+  writeFileSync(path, text, "utf8");
 }
 
 export function resolvePluginCodeThemePath(

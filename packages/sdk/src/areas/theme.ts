@@ -1,4 +1,10 @@
-import type { AppTheme, AppThemeSelection, CustomThemeWrite } from "@bb/domain";
+import type {
+  AppTheme,
+  AppThemeSelection,
+  CodeThemeFiles,
+  CodeThemeWrite,
+  CustomThemeWrite,
+} from "@bb/domain";
 import type {
   CustomThemeWriteResult,
   ThemeCatalogResponse,
@@ -44,6 +50,10 @@ export interface ThemeArea {
   rename(input: ThemeRenameInput): Promise<ThemeCatalogResult>;
   archive(themeId: string): Promise<ThemeCatalogResult>;
   restore(themeId: string): Promise<ThemeCatalogResult>;
+  readCodeTheme(themeId: string): Promise<CodeThemeFiles>;
+  writeCodeTheme(
+    input: CodeThemeWrite & { themeId: string },
+  ): Promise<CodeThemeFiles>;
 }
 
 export function createThemeArea(args: CreateSdkAreaArgs): ThemeArea {
@@ -128,6 +138,21 @@ export function createThemeArea(args: CreateSdkAreaArgs): ThemeArea {
       return transport.readJson(
         transport.api.v1.settings.themes[":id"].restore.$post({
           param: { id: themeId },
+        }),
+      );
+    },
+    async readCodeTheme(themeId) {
+      return transport.readJson(
+        transport.api.v1.settings.themes[":id"]["code-theme"].$get({
+          param: { id: themeId },
+        }),
+      );
+    },
+    async writeCodeTheme(input) {
+      return transport.readJson(
+        transport.api.v1.settings.themes[":id"]["code-theme"].$put({
+          param: { id: input.themeId },
+          json: { side: input.side, text: input.text },
         }),
       );
     },

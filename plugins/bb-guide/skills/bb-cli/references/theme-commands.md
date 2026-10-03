@@ -37,6 +37,14 @@
     theme might be wanted again. An active theme falls back to `default`.
   - `bb theme restore <name>` — move an archived theme back into the catalog.
   - `bb theme trash` — list archived themes that can be restored.
+  - `bb theme code show <name> <dark|light>` — print a custom theme's
+    code-theme sidecar JSON for one side. Says so when the side has no sidecar
+    file, or when `theme.json` declares that side and therefore overrides the
+    sidecar.
+  - `bb theme code set <name> <dark|light> [--json-text <text> | --clear]` —
+    write or remove a code-theme sidecar. Reads stdin when `--json-text` is
+    omitted. The JSON must be a valid VS Code theme; the server rejects
+    anything else with a 422 rather than writing a file that will not load.
   - `bb theme rename <from> <to>` — rename a custom theme by moving its folder
     on disk, so anything beside `theme.css` (`pierre-dark.json`, `theme.json`)
     travels with it and no content is rewritten. The folder name is the theme
