@@ -1168,6 +1168,48 @@ export function SettingsView() {
     [writeCodeThemeAsync],
   );
 
+  const { mutateAsync: renameThemeAsync } = renameCustomThemeMutation;
+  const { mutateAsync: archiveThemeAsync } = archiveCustomThemeMutation;
+  const { mutateAsync: restoreThemeAsync } = restoreCustomThemeMutation;
+  const { mutateAsync: deleteThemeAsync } = deleteCustomThemeMutation;
+  const { mutateAsync: writeThemeAsync } = writeCustomThemeMutation;
+
+  const renameStudioTheme = useCallback(
+    async (from: string, to: string): Promise<void> => {
+      await renameThemeAsync({ from, to });
+    },
+    [renameThemeAsync],
+  );
+
+  const archiveStudioTheme = useCallback(
+    async (themeName: string): Promise<void> => {
+      await archiveThemeAsync(themeName);
+    },
+    [archiveThemeAsync],
+  );
+
+  const restoreStudioTheme = useCallback(
+    async (themeName: string): Promise<void> => {
+      await restoreThemeAsync(themeName);
+    },
+    [restoreThemeAsync],
+  );
+
+  const deleteStudioTheme = useCallback(
+    async (themeName: string): Promise<void> => {
+      await deleteThemeAsync(themeName);
+    },
+    [deleteThemeAsync],
+  );
+
+  const saveStudioTheme = useCallback(
+    async ({ name: themeName, css }: { name: string; css: string }) => {
+      await writeThemeAsync({ name: themeName, css });
+      setThemeStudioOpen(false);
+    },
+    [writeThemeAsync],
+  );
+
   const studioThemeSources = useMemo<StudioSource[]>(() => {
     const custom = (systemConfigQuery.data?.customThemes ?? []).map((id) => ({
       id,
@@ -1290,9 +1332,7 @@ export function SettingsView() {
             saveError={writeCustomThemeMutation.error?.message ?? null}
             deleteError={deleteCustomThemeMutation.error?.message ?? null}
             renameError={renameCustomThemeMutation.error?.message ?? null}
-            onRename={async (from, to) => {
-              await renameCustomThemeMutation.mutateAsync({ from, to });
-            }}
+            onRename={renameStudioTheme}
             sources={studioThemeSources}
             activeThemeId={appearance.themeId}
             actionError={
@@ -1300,26 +1340,14 @@ export function SettingsView() {
               restoreCustomThemeMutation.error?.message ??
               null
             }
-            onArchive={async (themeName) => {
-              await archiveCustomThemeMutation.mutateAsync(themeName);
-            }}
-            onRestore={async (themeName) => {
-              await restoreCustomThemeMutation.mutateAsync(themeName);
-            }}
+            onArchive={archiveStudioTheme}
+            onRestore={restoreStudioTheme}
             codeThemePending={writeCodeThemeMutation.isPending}
             readCodeTheme={loadStudioCodeTheme}
             writeCodeTheme={saveStudioCodeTheme}
             loadThemeCss={loadStudioThemeCss}
-            onDelete={async (themeName) => {
-              await deleteCustomThemeMutation.mutateAsync(themeName);
-            }}
-            onSave={async ({ name: themeName, css }) => {
-              await writeCustomThemeMutation.mutateAsync({
-                name: themeName,
-                css,
-              });
-              setThemeStudioOpen(false);
-            }}
+            onDelete={deleteStudioTheme}
+            onSave={saveStudioTheme}
           />
         }
       />
