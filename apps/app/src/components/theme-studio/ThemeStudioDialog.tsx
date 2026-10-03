@@ -494,14 +494,16 @@ function ThemeStudioDialogBody({
             <Button size="sm" onClick={randomize}>
               Randomize
             </Button>
-            <div className="flex h-8 shrink-0 rounded-md border p-0.5">
+            <div className="flex h-8 shrink-0 items-stretch rounded-md border p-0.5">
               {(["light", "dark"] as const).map((value) => (
                 <button
                   key={value}
                   type="button"
                   className={cn(
-                    "rounded-sm px-2 text-2xs capitalize",
-                    mode === value ? "bg-accent" : "text-muted-foreground",
+                    "flex items-center rounded-sm px-2 text-2xs capitalize",
+                    mode === value
+                      ? "bg-accent text-accent-foreground ring-1 ring-inset ring-foreground"
+                      : "text-muted-foreground",
                   )}
                   onClick={() => setMode(value)}
                 >
@@ -551,7 +553,7 @@ function ThemeStudioDialogBody({
             <label
               htmlFor="theme-studio-name"
               className={cn(
-                "shrink-0 rounded-sm px-1.5 py-0.5 text-2xs font-medium",
+                "flex h-8 shrink-0 items-center rounded-sm px-2 text-2xs font-medium",
                 loaded.kind === "custom" && !saveAsNew
                   ? "bg-muted text-muted-foreground"
                   : "bg-primary text-primary-foreground",
