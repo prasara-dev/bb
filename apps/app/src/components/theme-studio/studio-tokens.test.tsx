@@ -340,6 +340,53 @@ describe("theme studio dialog", () => {
     unmount();
   });
 
+  it("archives a loaded custom theme", async () => {
+    const { ThemeStudioDialog } = await import("./ThemeStudioDialog");
+    const onArchive = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ThemeStudioDialog
+        open
+        onOpenChange={vi.fn()}
+        onSave={vi.fn()}
+        onArchive={onArchive}
+        sources={[{ id: "mine", name: "mine", kind: "custom" }]}
+        loadThemeCss={async () => ".dark { --canvas: #000; }"}
+      />,
+    );
+
+    await openSourceMenu(/new theme/i);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "mine" }));
+
+    fireEvent.click(await screen.findByRole("button", { name: /^archive$/i }));
+
+    await waitFor(() => expect(onArchive).toHaveBeenCalledWith("mine"));
+  });
+
+  it("offers archive only for custom themes and restores archived ones", async () => {
+    const { ThemeStudioDialog } = await import("./ThemeStudioDialog");
+    const onRestore = vi.fn().mockResolvedValue(undefined);
+    const loadThemeCss = vi.fn().mockResolvedValue(".dark { --canvas: #000; }");
+    render(
+      <ThemeStudioDialog
+        open
+        onOpenChange={vi.fn()}
+        onSave={vi.fn()}
+        onArchive={vi.fn()}
+        onRestore={onRestore}
+        sources={[{ id: "gone", name: "gone", kind: "archived" }]}
+        loadThemeCss={loadThemeCss}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /^archive$/i })).toBeNull();
+
+    await openSourceMenu(/new theme/i);
+    fireEvent.click(await screen.findByRole("menuitem", { name: /gone/ }));
+
+    await waitFor(() => expect(onRestore).toHaveBeenCalledWith("gone"));
+    await waitFor(() => expect(loadThemeCss).toHaveBeenCalled());
+  });
+
   it("leaves no pointer-events lock on body after opening and closing", async () => {
     const { ThemeStudioDialog } = await import("./ThemeStudioDialog");
     const { rerender } = render(

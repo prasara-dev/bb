@@ -261,6 +261,9 @@ move and downloads the new server's bb-app package for its service.
 - `bb theme create`
 - `bb theme delete`
 - `bb theme rename`
+- `bb theme archive`
+- `bb theme restore`
+- `bb theme trash`
 - `bb theme dir`
 - `bb theme favicon`
 - `bb theme favicon set`

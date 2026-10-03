@@ -33,6 +33,7 @@ const unavailableSystemConfig: SystemConfigResponse = {
   },
   appearance: defaultAppTheme,
   customThemes: [],
+  archivedThemes: [],
   pluginThemes: [],
   featureFlags: { placeholder: false, timelineWindowEventBudget: 1_500 },
   hostDaemonPort: null,

@@ -29,6 +29,9 @@ app uses ~/.bb/theme/…). The folder name is the theme id.
   bb theme delete <name>         Delete a custom theme; resets to default if active
   bb theme rename <from> <to>    Rename a custom theme by moving its folder, so
                                  files beside theme.css travel with it
+  bb theme archive <name>        Move a theme to <theme-dir>/.trash; restorable
+  bb theme restore <name>        Bring an archived theme back
+  bb theme trash                 List archived themes
   bb theme show [id] [--css]     Print the active palette, or resolve <id> without
                                  activating it; --css dumps the CSS
   bb theme reset                 Back to the default theme; preserve favicon color

@@ -113,7 +113,7 @@ function tokensFromPalette(palette: GeneratedPalette): {
   };
 }
 
-export type StudioSourceKind = "custom" | "builtin" | "plugin";
+export type StudioSourceKind = "custom" | "builtin" | "plugin" | "archived";
 
 export interface StudioSource {
   id: string;
@@ -132,6 +132,8 @@ export interface ThemeStudioDialogProps {
   onSave: (input: { name: string; css: string }) => Promise<void>;
   onDelete?: (name: string) => Promise<void>;
   onRename?: (from: string, to: string) => Promise<void>;
+  onArchive?: (name: string) => Promise<void>;
+  onRestore?: (name: string) => Promise<void>;
   loadThemeCss?: (source: StudioSource) => Promise<string | null>;
   sources?: readonly StudioSource[];
   activeThemeId?: string;
@@ -140,6 +142,7 @@ export interface ThemeStudioDialogProps {
   saveError?: string | null;
   deleteError?: string | null;
   renameError?: string | null;
+  actionError?: string | null;
 }
 
 function ConfirmDialog({
@@ -179,6 +182,9 @@ function ThemeStudioDialogBody({
   saveError = null,
   deleteError = null,
   renameError = null,
+  onArchive,
+  onRestore,
+  actionError = null,
 }: ThemeStudioDialogProps) {
   const [mode, setMode] = useState<PreviewMode>("dark");
   const [name, setName] = useState(initialName);
@@ -337,6 +343,7 @@ function ThemeStudioDialogBody({
 
   const hoverSource = useCallback(
     (source: StudioSource) => {
+      if (source.kind === "archived") return;
       void readSourceCss(source).then((sourceCss) => {
         if (sourceCss !== null) setHoveredCss(sourceCss);
       });
@@ -437,12 +444,25 @@ function ThemeStudioDialogBody({
                     key={`${source.kind}:${source.id}`}
                     onFocus={() => hoverSource(source)}
                     onBlur={clearHover}
-                    onSelect={() => void loadSource(source)}
+                    onSelect={() => {
+                      if (source.kind === "archived") {
+                        if (!onRestore) return;
+                        void onRestore(source.id).then(() =>
+                          loadSource({ ...source, kind: "custom" }),
+                        );
+                        return;
+                      }
+                      void loadSource(source);
+                    }}
                   >
                     {source.name}
                     {source.kind === "custom" ? null : (
                       <span className="text-muted-foreground">
-                        {source.kind === "builtin" ? "built-in" : "plugin"}
+                        {source.kind === "builtin"
+                          ? "built-in"
+                          : source.kind === "plugin"
+                            ? "plugin"
+                            : "archived"}
                       </span>
                     )}
                     {activeThemeId === source.id ? (
@@ -474,6 +494,21 @@ function ThemeStudioDialogBody({
                 onClick={() => setConfirm("delete")}
               >
                 Delete
+              </Button>
+            ) : null}
+            {loaded.kind === "custom" && onArchive ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (!onArchive) return;
+                  void onArchive(loaded.id).then(() => {
+                    startNew();
+                    onOpenChange(false);
+                  });
+                }}
+              >
+                Archive
               </Button>
             ) : null}
             {loaded.kind === "custom" && onRename ? (

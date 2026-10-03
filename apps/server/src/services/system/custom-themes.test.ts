@@ -9,13 +9,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  archiveCustomTheme,
   customThemeExists,
   deleteCustomTheme,
+  isArchivedCustomTheme,
+  listArchivedThemeNames,
   listCustomThemeNames,
   readCustomThemeCss,
   renameCustomTheme,
   resolveCustomThemeCssPath,
   resolveThemeRootPath,
+  restoreCustomTheme,
   writeCustomThemeCss,
 } from "./custom-themes.js";
 
@@ -109,6 +113,62 @@ describe("custom theme writes", () => {
     expect(() => renameCustomTheme(themeRoot, "ghost", "other")).toThrow(
       /not found/,
     );
+  });
+
+  it("archives into .trash, out of the catalog but intact", () => {
+    writeCustomThemeCss(themeRoot, "retired", ":root { --canvas: #fff; }");
+    writeFileSync(
+      join(themeRoot, "retired", "pierre-dark.json"),
+      '{"name":"x"}',
+      "utf8",
+    );
+
+    archiveCustomTheme(themeRoot, "retired");
+
+    expect(listCustomThemeNames(themeRoot)).toEqual([]);
+    expect(listArchivedThemeNames(themeRoot)).toEqual(["retired"]);
+    expect(isArchivedCustomTheme(themeRoot, "retired")).toBe(true);
+    expect(readCustomThemeCss(themeRoot, "retired")).toBeNull();
+    expect(
+      readFileSync(join(themeRoot, ".trash", "retired", "pierre-dark.json"), "utf8"),
+    ).toBe('{"name":"x"}');
+  });
+
+  it("restores an archived theme back into the catalog", () => {
+    writeCustomThemeCss(themeRoot, "retired", ":root { --canvas: #fff; }");
+    archiveCustomTheme(themeRoot, "retired");
+
+    restoreCustomTheme(themeRoot, "retired");
+
+    expect(listCustomThemeNames(themeRoot)).toEqual(["retired"]);
+    expect(listArchivedThemeNames(themeRoot)).toEqual([]);
+    expect(readCustomThemeCss(themeRoot, "retired")).toBe(
+      ":root { --canvas: #fff; }",
+    );
+  });
+
+  it("refuses to archive a missing theme or restore onto an existing one", () => {
+    expect(() => archiveCustomTheme(themeRoot, "ghost")).toThrow(/not found/);
+
+    writeCustomThemeCss(themeRoot, "dup", ":root { --canvas: #111; }");
+    archiveCustomTheme(themeRoot, "dup");
+    writeCustomThemeCss(themeRoot, "dup", ":root { --canvas: #222; }");
+
+    expect(() => restoreCustomTheme(themeRoot, "dup")).toThrow(
+      /already exists/,
+    );
+    expect(readCustomThemeCss(themeRoot, "dup")).toBe(
+      ":root { --canvas: #222; }",
+    );
+  });
+
+  it("keeps the trash folder itself out of both name lists", () => {
+    writeCustomThemeCss(themeRoot, "live", ":root { --canvas: #fff; }");
+    archiveCustomTheme(themeRoot, "live");
+
+    expect(listCustomThemeNames(themeRoot)).not.toContain(".trash");
+    expect(listArchivedThemeNames(themeRoot)).not.toContain(".trash");
+    expect(listArchivedThemeNames(themeRoot)).toEqual(["live"]);
   });
 
   it("omits folders without a theme.css and names the schema rejects", () => {

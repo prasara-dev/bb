@@ -78,6 +78,8 @@ import {
   useWriteCustomTheme,
   useDeleteCustomTheme,
   useRenameCustomTheme,
+  useArchiveCustomTheme,
+  useRestoreCustomTheme,
 } from "@/hooks/mutations/settings-mutations";
 import { ThemeStudioDialog } from "@/components/theme-studio/ThemeStudioDialog";
 import type { StudioSource } from "@/components/theme-studio/ThemeStudioDialog";
@@ -1144,6 +1146,8 @@ export function SettingsView() {
   const writeCustomThemeMutation = useWriteCustomTheme();
   const deleteCustomThemeMutation = useDeleteCustomTheme();
   const renameCustomThemeMutation = useRenameCustomTheme();
+  const archiveCustomThemeMutation = useArchiveCustomTheme();
+  const restoreCustomThemeMutation = useRestoreCustomTheme();
 
   const studioThemeSources = useMemo<StudioSource[]>(() => {
     const custom = (systemConfigQuery.data?.customThemes ?? []).map((id) => ({
@@ -1163,7 +1167,14 @@ export function SettingsView() {
         kind: "plugin" as const,
       }),
     );
-    return [...custom, ...builtin, ...plugin];
+    const archived = (systemConfigQuery.data?.archivedThemes ?? []).map(
+      (id) => ({
+        id,
+        name: id,
+        kind: "archived" as const,
+      }),
+    );
+    return [...custom, ...builtin, ...plugin, ...archived];
   }, [systemConfigQuery.data]);
 
   const loadStudioThemeCss = useCallback(
@@ -1265,6 +1276,17 @@ export function SettingsView() {
             }}
             sources={studioThemeSources}
             activeThemeId={appearance.themeId}
+            actionError={
+              archiveCustomThemeMutation.error?.message ??
+              restoreCustomThemeMutation.error?.message ??
+              null
+            }
+            onArchive={async (themeName) => {
+              await archiveCustomThemeMutation.mutateAsync(themeName);
+            }}
+            onRestore={async (themeName) => {
+              await restoreCustomThemeMutation.mutateAsync(themeName);
+            }}
             loadThemeCss={loadStudioThemeCss}
             onDelete={async (themeName) => {
               await deleteCustomThemeMutation.mutateAsync(themeName);

@@ -191,6 +191,53 @@ export function registerThemeCommands(
     );
 
   theme
+    .command("archive <name>")
+    .description(
+      "Move a custom theme to the trash folder, keeping it restorable",
+    )
+    .option("--json", "Print machine-readable JSON output")
+    .action(
+      action(async (name: string, opts: JsonOutputOptions) => {
+        const sdk = createCliBbSdk(getUrl());
+        const catalog = await sdk.theme.archive(name);
+        if (outputJson(opts, catalog)) return;
+        console.log(`Archived custom theme '${name}'`);
+        console.log(`Active: ${describeTheme(catalog.active)}`);
+      }),
+    );
+
+  theme
+    .command("restore <name>")
+    .description("Restore an archived custom theme from the trash folder")
+    .option("--json", "Print machine-readable JSON output")
+    .action(
+      action(async (name: string, opts: JsonOutputOptions) => {
+        const sdk = createCliBbSdk(getUrl());
+        const catalog = await sdk.theme.restore(name);
+        if (outputJson(opts, catalog)) return;
+        console.log(`Restored custom theme '${name}'`);
+        console.log(`Active: ${describeTheme(catalog.active)}`);
+      }),
+    );
+
+  theme
+    .command("trash")
+    .description("List archived custom themes that can be restored")
+    .option("--json", "Print machine-readable JSON output")
+    .action(
+      action(async (opts: JsonOutputOptions) => {
+        const sdk = createCliBbSdk(getUrl());
+        const catalog = await sdk.theme.catalog();
+        if (outputJson(opts, { archived: catalog.archived })) return;
+        if (catalog.archived.length === 0) {
+          console.log("  (none)");
+          return;
+        }
+        for (const name of catalog.archived) console.log(`  ${name}`);
+      }),
+    );
+
+  theme
     .command("rename <from> <to>")
     .description(
       "Rename a custom theme by moving its folder, so files beside theme.css travel with it",

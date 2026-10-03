@@ -230,6 +230,7 @@ export const systemConfigResponseSchema = z.object({
   experiments: experimentsSchema,
   appearance: appThemeSchema,
   customThemes: z.array(z.string()),
+  archivedThemes: z.array(z.string()),
   pluginThemes: z.array(pluginThemeMetaSchema),
   featureFlags: featureFlagsSchema,
   hostDaemonPort: z.number().nullable(),
@@ -252,6 +253,7 @@ export type SystemAttentionResponse = z.infer<
 export const themeCatalogResponseSchema = z.object({
   dir: z.string(),
   custom: z.array(z.string()),
+  archived: z.array(z.string()),
   plugins: z.array(pluginThemeMetaSchema),
   active: appThemeSchema,
 });

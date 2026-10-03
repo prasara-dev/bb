@@ -385,12 +385,14 @@ type ExpectedSystemKey =
 type ExpectedSystemUiPreferencesKey = "list" | "reset" | "set";
 
 type ExpectedThemeKey =
+  | "archive"
   | "catalog"
   | "create"
   | "get"
   | "remove"
   | "rename"
   | "resolve"
+  | "restore"
   | "set"
   | "update";
 

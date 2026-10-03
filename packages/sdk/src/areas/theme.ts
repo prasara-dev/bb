@@ -42,6 +42,8 @@ export interface ThemeArea {
   update(input: ThemeWriteInput): Promise<ThemeWriteResult>;
   remove(themeId: string): Promise<ThemeCatalogResult>;
   rename(input: ThemeRenameInput): Promise<ThemeCatalogResult>;
+  archive(themeId: string): Promise<ThemeCatalogResult>;
+  restore(themeId: string): Promise<ThemeCatalogResult>;
 }
 
 export function createThemeArea(args: CreateSdkAreaArgs): ThemeArea {
@@ -112,6 +114,20 @@ export function createThemeArea(args: CreateSdkAreaArgs): ThemeArea {
         transport.api.v1.settings.themes[":id"].$patch({
           param: { id: input.themeId },
           json: { to: input.to },
+        }),
+      );
+    },
+    async archive(themeId) {
+      return transport.readJson(
+        transport.api.v1.settings.themes[":id"].archive.$post({
+          param: { id: themeId },
+        }),
+      );
+    },
+    async restore(themeId) {
+      return transport.readJson(
+        transport.api.v1.settings.themes[":id"].restore.$post({
+          param: { id: themeId },
         }),
       );
     },

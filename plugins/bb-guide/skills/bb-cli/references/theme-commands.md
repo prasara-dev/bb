@@ -31,6 +31,12 @@
     theme naming rules (letters, digits, `.`, `_`, `-`; no leading `.`).
   - `bb theme delete <name>` — delete a custom theme folder. When the deleted
     theme was active, the app falls back to `default`.
+  - `bb theme archive <name>` — move a custom theme into `<theme-dir>/.trash`,
+    which the catalog ignores. The folder is kept whole, so the theme can be
+    brought back with `bb theme restore`. Prefer this to `delete` when the
+    theme might be wanted again. An active theme falls back to `default`.
+  - `bb theme restore <name>` — move an archived theme back into the catalog.
+  - `bb theme trash` — list archived themes that can be restored.
   - `bb theme rename <from> <to>` — rename a custom theme by moving its folder
     on disk, so anything beside `theme.css` (`pierre-dark.json`, `theme.json`)
     travels with it and no content is rewritten. The folder name is the theme

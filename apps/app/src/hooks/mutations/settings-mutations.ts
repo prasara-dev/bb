@@ -143,6 +143,32 @@ export function useDeleteCustomTheme() {
   });
 }
 
+export function useArchiveCustomTheme() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    meta: { errorMessage: "Failed to archive the custom theme." },
+    mutationFn: (themeId: string) => sdk.theme.archive(themeId),
+    onSuccess: (_result, themeId) => {
+      queryClient.removeQueries({ queryKey: systemThemeQueryKey(themeId) });
+      invalidateSystemConfig({ queryClient });
+    },
+  });
+}
+
+export function useRestoreCustomTheme() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    meta: { errorMessage: "Failed to restore the custom theme." },
+    mutationFn: (themeId: string) => sdk.theme.restore(themeId),
+    onSuccess: (_result, themeId) => {
+      queryClient.removeQueries({ queryKey: systemThemeQueryKey(themeId) });
+      invalidateSystemConfig({ queryClient });
+    },
+  });
+}
+
 export function useRenameCustomTheme() {
   const queryClient = useQueryClient();
 

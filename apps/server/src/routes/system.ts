@@ -37,6 +37,7 @@ import {
   typedRoutes,
   type PublicApiSchema,
   type SystemEnvironmentProvider,
+  type ThemeCatalogResponse,
 } from "@bb/server-contract";
 import type { Hono } from "hono";
 import {
@@ -81,9 +82,13 @@ import {
   resolveAppTheme,
   resolveCustomThemeCssPath,
   resolveThemeRootPath,
+  archiveCustomTheme,
   customThemeExists,
   deleteCustomTheme,
+  isArchivedCustomTheme,
+  listArchivedThemeNames,
   renameCustomTheme,
+  restoreCustomTheme,
   writeCustomThemeCss,
 } from "../services/system/custom-themes.js";
 import {
@@ -227,6 +232,7 @@ export function registerSystemRoutes(
         getStoredFaviconColor(deps.db),
       ),
       customThemes: listCustomThemeNames(themeRoot),
+      archivedThemes: listArchivedThemeNames(themeRoot),
       pluginThemes: pluginService.listThemes(),
       featureFlags: deps.config.featureFlags,
       hostDaemonPort: deps.config.hostDaemonPort,
@@ -383,9 +389,56 @@ export function registerSystemRoutes(
     });
   });
 
+  const buildThemeCatalog = async (): Promise<ThemeCatalogResponse> => ({
+    dir: themeRoot,
+    custom: listCustomThemeNames(themeRoot),
+    archived: listArchivedThemeNames(themeRoot),
+    plugins: pluginService.listThemes(),
+    active: await resolveSelectedTheme(
+      getStoredThemeId(deps.db),
+      getStoredFaviconColor(deps.db),
+    ),
+  });
+
+  const requireOwnedCustomTheme = async (themeId: string): Promise<void> => {
+    if (isBuiltInThemeId(themeId)) {
+      throw new ApiError(
+        400,
+        "invalid_request",
+        `'${themeId}' is a built-in palette and cannot be modified.`,
+      );
+    }
+    if ((await pluginService.readThemeCss(themeId)) !== null) {
+      throw new ApiError(
+        400,
+        "invalid_request",
+        `'${themeId}' is provided by a plugin and cannot be modified.`,
+      );
+    }
+    if (!customThemeNameSchema.safeParse(themeId).success) {
+      throw new ApiError(400, "invalid_request", `Invalid theme id '${themeId}'.`);
+    }
+    if (readCustomThemeCss(themeRoot, themeId) === null) {
+      throw new ApiError(
+        404,
+        "theme_not_found",
+        `Custom theme '${themeId}' not found.`,
+      );
+    }
+  };
+
+  const fallBackFromTheme = (themeId: string): void => {
+    if (getStoredThemeId(deps.db) === themeId) {
+      setStoredAppearance(deps.db, {
+        themeId: defaultAppTheme.themeId,
+        faviconColor: getStoredFaviconColor(deps.db),
+      });
+    }
+  };
+
   del(routes.deleteCustomTheme, async (context) => {
     const themeId = context.req.param("id");
-    await requireKnownTheme(themeId);
+    await requireOwnedCustomTheme(themeId);
     deleteCustomTheme(themeRoot, themeId);
     if (getStoredThemeId(deps.db) === themeId) {
       setStoredAppearance(deps.db, {
@@ -394,21 +447,13 @@ export function registerSystemRoutes(
       });
     }
     deps.hub.notifySystem(["config-changed"]);
-    return context.json({
-      dir: themeRoot,
-      custom: listCustomThemeNames(themeRoot),
-      plugins: pluginService.listThemes(),
-      active: await resolveSelectedTheme(
-        getStoredThemeId(deps.db),
-        getStoredFaviconColor(deps.db),
-      ),
-    });
+    return context.json(await buildThemeCatalog());
   });
 
   patch(routes.renameCustomTheme, async (context, payload) => {
     const themeId = context.req.param("id");
     const { to } = payload;
-    await requireKnownTheme(themeId);
+    await requireOwnedCustomTheme(themeId);
     if (isBuiltInThemeId(to) || themeId === to) {
       throw new ApiError(400, "invalid_request", `Cannot rename to '${to}'.`);
     }
@@ -427,15 +472,7 @@ export function registerSystemRoutes(
       });
     }
     deps.hub.notifySystem(["config-changed"]);
-    return context.json({
-      dir: themeRoot,
-      custom: listCustomThemeNames(themeRoot),
-      plugins: pluginService.listThemes(),
-      active: await resolveSelectedTheme(
-        getStoredThemeId(deps.db),
-        getStoredFaviconColor(deps.db),
-      ),
-    });
+    return context.json(await buildThemeCatalog());
   });
 
   get(routes.resolveTheme, async (context) => {
@@ -447,16 +484,31 @@ export function registerSystemRoutes(
   });
 
   get(routes.themes, async (context) =>
-    context.json({
-      dir: themeRoot,
-      custom: listCustomThemeNames(themeRoot),
-      plugins: pluginService.listThemes(),
-      active: await resolveSelectedTheme(
-        getStoredThemeId(deps.db),
-        getStoredFaviconColor(deps.db),
-      ),
-    }),
+    context.json(await buildThemeCatalog()),
   );
+
+  post(routes.archiveCustomTheme, async (context) => {
+    const themeId = context.req.param("id");
+    await requireOwnedCustomTheme(themeId);
+    archiveCustomTheme(themeRoot, themeId);
+    fallBackFromTheme(themeId);
+    deps.hub.notifySystem(["config-changed"]);
+    return context.json(await buildThemeCatalog());
+  });
+
+  post(routes.restoreCustomTheme, async (context) => {
+    const themeId = context.req.param("id");
+    if (!isArchivedCustomTheme(themeRoot, themeId)) {
+      throw new ApiError(
+        404,
+        "theme_not_found",
+        `Archived theme '${themeId}' not found.`,
+      );
+    }
+    restoreCustomTheme(themeRoot, themeId);
+    deps.hub.notifySystem(["config-changed"]);
+    return context.json(await buildThemeCatalog());
+  });
 
   post(routes.reloadConfig, async (context) => {
     try {

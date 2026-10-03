@@ -23,6 +23,7 @@ export function makeSystemConfig(
     experiments: defaultExperiments,
     appearance: defaultAppTheme,
     customThemes: [],
+    archivedThemes: [],
     pluginThemes: [],
     featureFlags: defaultFeatureFlags,
     hostDaemonPort: null,

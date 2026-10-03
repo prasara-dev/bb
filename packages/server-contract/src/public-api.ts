@@ -1938,6 +1938,23 @@ export const publicApiRoutes = {
       ),
       response: jsonResponse<ThemeCatalogResponse>(),
     }),
+    /**
+     * Move a custom theme into `<themeRoot>/.trash`, which the catalog ignores
+     * because its name fails the custom-theme schema. The folder is kept whole
+     * so the theme can be restored, and an active theme falls back to default.
+     */
+    archiveCustomTheme: defineRoute({
+      path: "/settings/themes/:id/archive",
+      method: "post",
+      request: noRequest<PathId>(),
+      response: jsonResponse<ThemeCatalogResponse>(),
+    }),
+    restoreCustomTheme: defineRoute({
+      path: "/settings/themes/:id/restore",
+      method: "post",
+      request: noRequest<PathId>(),
+      response: jsonResponse<ThemeCatalogResponse>(),
+    }),
     reloadConfig: defineRoute({
       path: "/system/config/reload",
       method: "post",

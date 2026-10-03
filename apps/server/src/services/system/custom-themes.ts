@@ -21,6 +21,11 @@ import { readCustomThemeCodeTheme } from "./code-themes.js";
 
 const THEME_DIR_NAME = "theme";
 const THEME_CSS_FILE_NAME = "theme.css";
+const THEME_TRASH_DIR_NAME = ".trash";
+
+function resolveTrashRoot(themeRoot: string): string {
+  return join(themeRoot, THEME_TRASH_DIR_NAME);
+}
 
 export function resolveThemeRootPath(dataDir: string): string {
   return join(dataDir, THEME_DIR_NAME);
@@ -78,6 +83,49 @@ export function writeCustomThemeCss(
 
 export function deleteCustomTheme(themeRoot: string, name: string): void {
   rmSync(join(themeRoot, name), { recursive: true, force: true });
+}
+
+function listDirectoryNames(path: string): string[] {
+  try {
+    return readdirSync(path, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+  } catch {
+    return [];
+  }
+}
+
+export function listArchivedThemeNames(themeRoot: string): string[] {
+  return listDirectoryNames(resolveTrashRoot(themeRoot))
+    .filter((name) => customThemeNameSchema.safeParse(name).success)
+    .sort((a, b) => a.localeCompare(b));
+}
+
+export function isArchivedCustomTheme(
+  themeRoot: string,
+  name: string,
+): boolean {
+  return existsSync(join(resolveTrashRoot(themeRoot), name));
+}
+
+export function archiveCustomTheme(themeRoot: string, name: string): void {
+  const source = join(themeRoot, name);
+  if (!existsSync(source)) {
+    throw new Error(`Custom theme '${name}' not found.`);
+  }
+  mkdirSync(resolveTrashRoot(themeRoot), { recursive: true });
+  renameSync(source, join(resolveTrashRoot(themeRoot), name));
+}
+
+export function restoreCustomTheme(themeRoot: string, name: string): void {
+  const source = join(resolveTrashRoot(themeRoot), name);
+  if (!existsSync(source)) {
+    throw new Error(`Archived theme '${name}' not found.`);
+  }
+  if (existsSync(join(themeRoot, name))) {
+    throw new Error(`Custom theme '${name}' already exists.`);
+  }
+  renameSync(source, join(themeRoot, name));
 }
 
 export function renameCustomTheme(
