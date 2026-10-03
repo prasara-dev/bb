@@ -7,6 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { useEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { customThemeNameSchema } from "@bb/domain";
 import {
@@ -454,6 +455,56 @@ describe("theme studio dialog", () => {
 
     expect(screen.queryByLabelText("Dark code theme JSON")).toBeNull();
     expect(screen.getByText(/borrow its colors/i)).toBeTruthy();
+  });
+
+  it("reads code themes once when the parent re-renders", async () => {
+    const { ThemeStudioDialog } = await import("./ThemeStudioDialog");
+    const files = {
+      dark: {
+        text: '{"name":"QA","type":"dark"}',
+        overriddenByManifest: false,
+        manifestValue: null,
+      },
+      light: {
+        text: null,
+        overriddenByManifest: false,
+        manifestValue: null,
+      },
+    };
+    let reads = 0;
+    const readCodeTheme = async (): Promise<typeof files> => {
+      reads += 1;
+      return files;
+    };
+
+    function Harness() {
+      const [, setTick] = useState(0);
+      useEffect(() => {
+        const timer = setInterval(() => setTick((value) => value + 1), 15);
+        return () => clearInterval(timer);
+      }, []);
+      return (
+        <ThemeStudioDialog
+          open
+          onOpenChange={vi.fn()}
+          onSave={vi.fn()}
+          sources={[{ id: "mine", name: "mine", kind: "custom" }]}
+          loadThemeCss={async () => ".dark { --canvas: #000; }"}
+          readCodeTheme={readCodeTheme}
+          writeCodeTheme={vi.fn()}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    await openSourceMenu(/new theme/i);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "mine" }));
+    await waitFor(() => expect(reads).toBe(1));
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    expect(reads).toBe(1);
   });
 
   it("leaves no pointer-events lock on body after opening and closing", async () => {

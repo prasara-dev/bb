@@ -363,7 +363,13 @@ function ThemeStudioDialogBody({
     let cancelled = false;
     void readCodeTheme(loaded.id).then((files) => {
       if (!cancelled && files) {
-        setCodeThemeById((previous) => ({ ...previous, [loaded.id]: files }));
+        setCodeThemeById((previous) => {
+          const existing = previous[loaded.id];
+          if (existing && JSON.stringify(existing) === JSON.stringify(files)) {
+            return previous;
+          }
+          return { ...previous, [loaded.id]: files };
+        });
       }
     });
     return () => {

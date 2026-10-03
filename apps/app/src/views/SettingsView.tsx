@@ -13,6 +13,7 @@ import {
   managedBranchPrefixSchema,
   type AppTheme,
   type BuiltInThemeId,
+  type CodeThemeSide,
   type ExperimentKey,
   type Experiments,
   type FaviconColorPreference,
@@ -1153,6 +1154,20 @@ export function SettingsView() {
   const readCodeThemeMutation = useReadCodeTheme();
   const writeCodeThemeMutation = useWriteCodeTheme();
 
+  const { mutateAsync: readCodeThemeAsync } = readCodeThemeMutation;
+  const { mutateAsync: writeCodeThemeAsync } = writeCodeThemeMutation;
+
+  const loadStudioCodeTheme = useCallback(
+    (themeName: string) => readCodeThemeAsync(themeName),
+    [readCodeThemeAsync],
+  );
+
+  const saveStudioCodeTheme = useCallback(
+    (themeName: string, side: CodeThemeSide, text: string | null) =>
+      writeCodeThemeAsync({ themeId: themeName, side, text }),
+    [writeCodeThemeAsync],
+  );
+
   const studioThemeSources = useMemo<StudioSource[]>(() => {
     const custom = (systemConfigQuery.data?.customThemes ?? []).map((id) => ({
       id,
@@ -1292,16 +1307,8 @@ export function SettingsView() {
               await restoreCustomThemeMutation.mutateAsync(themeName);
             }}
             codeThemePending={writeCodeThemeMutation.isPending}
-            readCodeTheme={async (themeName) =>
-              readCodeThemeMutation.mutateAsync(themeName)
-            }
-            writeCodeTheme={async (themeName, side, text) =>
-              writeCodeThemeMutation.mutateAsync({
-                themeId: themeName,
-                side,
-                text,
-              })
-            }
+            readCodeTheme={loadStudioCodeTheme}
+            writeCodeTheme={saveStudioCodeTheme}
             loadThemeCss={loadStudioThemeCss}
             onDelete={async (themeName) => {
               await deleteCustomThemeMutation.mutateAsync(themeName);
