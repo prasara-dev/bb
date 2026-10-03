@@ -404,8 +404,8 @@ function ThemeStudioDialogBody({
         </DialogHeader>
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[minmax(0,1fr)_16rem]">
-        <div className="flex min-h-0 flex-col gap-2">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_16rem] md:grid-rows-[auto_auto_minmax(0,1fr)]">
+        <div className="contents">
           <div className="flex flex-wrap items-center gap-2">
             <DropdownMenu
               open={pickerOpen}
@@ -537,66 +537,6 @@ function ThemeStudioDialogBody({
                 {constraintProfile.label}
               </span>
             </div>
-
-            <div className="flex shrink-0 flex-col gap-1">
-              <div className="flex items-center gap-1.5">
-                <label
-                  htmlFor="theme-studio-name"
-                  className={cn(
-                    "shrink-0 rounded-sm px-1.5 py-0.5 text-2xs font-medium",
-                    loaded.kind === "custom" && !saveAsNew
-                      ? "bg-muted text-muted-foreground"
-                      : "bg-primary text-primary-foreground",
-                  )}
-                >
-                  {loaded.kind === "custom" && !saveAsNew
-                    ? "Theme name"
-                    : "Save as"}
-                </label>
-                <Input
-                  id="theme-studio-name"
-                  className="h-8 w-40"
-                  value={
-                    loaded.kind === "custom" && !saveAsNew ? loaded.id : name
-                  }
-                  placeholder="my-theme"
-                  readOnly={loaded.kind === "custom" && !saveAsNew}
-                  onChange={(event) => setName(event.target.value)}
-                />
-              </div>
-              {saveError || deleteError || renameError ? (
-                <p className="truncate text-2xs text-destructive-text">
-                  {saveError ?? deleteError ?? renameError}
-                </p>
-              ) : loaded.kind === "custom" && !saveAsNew ? (
-                <p className="truncate text-2xs text-muted-foreground">
-                  Saving replaces this theme in place.
-                </p>
-              ) : nameCheck && !nameCheck.success ? (
-                <p className="truncate text-2xs text-destructive-text">
-                  {nameCheck.error.issues[0]?.message ?? "Invalid theme name."}
-                </p>
-              ) : (
-                <p className="truncate text-2xs text-muted-foreground">
-                  Use letters, digits,{" "}
-                  <code className="font-mono">.&nbsp;_&nbsp;-</code>.
-                </p>
-              )}
-              {loaded.kind === "custom" ? (
-                <label className="flex items-center gap-1.5 text-2xs text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={saveAsNew}
-                    onChange={(event) => {
-                      const next = event.target.checked;
-                      setSaveAsNew(next);
-                      if (next) setName(`${loaded.id}-copy`);
-                    }}
-                  />
-                  Save as a new theme instead of overwriting
-                </label>
-              ) : null}
-            </div>
           </div>
 
           <div className="min-h-0 flex-1 overflow-hidden rounded-md border bg-background">
@@ -606,53 +546,114 @@ function ThemeStudioDialogBody({
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-col gap-2">
-          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-            {visibleTokens.map((token) => (
-              <ColorPicker
-                key={token}
-                label={STUDIO_TOKEN_LABELS[token]}
-                value={tokens[mode][token]}
-                onChange={(value) => mutateTokens(mode, token, value)}
-              />
-            ))}
-
-            <Button
-              size="sm"
-              variant="ghost"
-              className="justify-start"
-              onClick={() => setAdvanced((previous) => !previous)}
+        <div className="contents">
+          <div className="flex items-center gap-1.5">
+            <label
+              htmlFor="theme-studio-name"
+              className={cn(
+                "shrink-0 rounded-sm px-1.5 py-0.5 text-2xs font-medium",
+                loaded.kind === "custom" && !saveAsNew
+                  ? "bg-muted text-muted-foreground"
+                  : "bg-primary text-primary-foreground",
+              )}
             >
-              {advanced ? "Hide" : "Show"} advanced tokens
-            </Button>
+              {loaded.kind === "custom" && !saveAsNew
+                ? "Theme name"
+                : "Save as"}
+            </label>
+            <Input
+              id="theme-studio-name"
+              className="h-8 w-full"
+              value={loaded.kind === "custom" && !saveAsNew ? loaded.id : name}
+              placeholder="my-theme"
+              readOnly={loaded.kind === "custom" && !saveAsNew}
+              onChange={(event) => setName(event.target.value)}
+            />
           </div>
 
-          <DialogFooter className="shrink-0 py-0">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              disabled={
-                pending ||
-                targetName.length === 0 ||
-                (nameCheck !== null && !nameCheck.success)
-              }
-              onClick={() => void handleSave()}
-            >
-              {pending
-                ? "Saving…"
-                : loaded.kind === "custom" && !saveAsNew
-                  ? "Overwrite and apply"
-                  : isBase
-                    ? "Save as new"
-                    : "Save and apply"}
-            </Button>
-          </DialogFooter>
+          <div className="flex min-h-0 flex-col justify-center gap-1">
+            {saveError || deleteError || renameError ? (
+              <p className="truncate text-2xs text-destructive-text">
+                {saveError ?? deleteError ?? renameError}
+              </p>
+            ) : loaded.kind === "custom" && !saveAsNew ? (
+              <p className="truncate text-2xs text-muted-foreground">
+                Saving replaces this theme in place.
+              </p>
+            ) : nameCheck && !nameCheck.success ? (
+              <p className="truncate text-2xs text-destructive-text">
+                {nameCheck.error.issues[0]?.message ?? "Invalid theme name."}
+              </p>
+            ) : (
+              <p className="truncate text-2xs text-muted-foreground">
+                Use letters, digits,{" "}
+                <code className="font-mono">.&nbsp;_&nbsp;-</code>.
+              </p>
+            )}
+            {loaded.kind === "custom" ? (
+              <label className="flex items-center gap-1.5 text-2xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={saveAsNew}
+                  onChange={(event) => {
+                    const next = event.target.checked;
+                    setSaveAsNew(next);
+                    if (next) setName(`${loaded.id}-copy`);
+                  }}
+                />
+                Save as a new theme instead of overwriting
+              </label>
+            ) : null}
+          </div>
+
+          <div className="flex min-h-0 flex-col gap-2">
+            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+              {visibleTokens.map((token) => (
+                <ColorPicker
+                  key={token}
+                  label={STUDIO_TOKEN_LABELS[token]}
+                  value={tokens[mode][token]}
+                  onChange={(value) => mutateTokens(mode, token, value)}
+                />
+              ))}
+
+              <Button
+                size="sm"
+                variant="ghost"
+                className="justify-start"
+                onClick={() => setAdvanced((previous) => !previous)}
+              >
+                {advanced ? "Hide" : "Show"} advanced tokens
+              </Button>
+            </div>
+
+            <DialogFooter className="shrink-0 py-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                disabled={
+                  pending ||
+                  targetName.length === 0 ||
+                  (nameCheck !== null && !nameCheck.success)
+                }
+                onClick={() => void handleSave()}
+              >
+                {pending
+                  ? "Saving…"
+                  : loaded.kind === "custom" && !saveAsNew
+                    ? "Overwrite and apply"
+                    : isBase
+                      ? "Save as new"
+                      : "Save and apply"}
+              </Button>
+            </DialogFooter>
+          </div>
         </div>
       </div>
 
