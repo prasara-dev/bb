@@ -436,7 +436,7 @@ describe("theme studio dialog", () => {
         onSave={vi.fn()}
         sources={[{ id: "nord", name: "nord", kind: "builtin" }]}
         loadThemeCss={async () => ".dark { --canvas: #000; }"}
-        readCodeTheme={vi.fn()}
+        readCodeTheme={vi.fn().mockResolvedValue(null)}
         writeCodeTheme={vi.fn()}
       />,
     );
