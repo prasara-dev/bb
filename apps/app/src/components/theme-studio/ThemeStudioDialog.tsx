@@ -406,7 +406,7 @@ function ThemeStudioDialogBody({
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_16rem] md:grid-rows-[auto_auto_minmax(0,1fr)]">
         <div className="contents">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 md:col-start-1 md:row-start-1">
             <DropdownMenu
               open={pickerOpen}
               onOpenChange={(open) => {
@@ -490,7 +490,7 @@ function ThemeStudioDialogBody({
             ) : null}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 md:col-start-1 md:row-start-2">
             <Button size="sm" onClick={randomize}>
               Randomize
             </Button>
@@ -539,7 +539,7 @@ function ThemeStudioDialogBody({
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-hidden rounded-md border bg-background">
+          <div className="min-h-0 overflow-hidden rounded-md border bg-background md:col-start-1 md:row-start-3">
             <div className={mode === "dark" ? "dark h-full" : "light h-full"}>
               <ThemePreview tokens={tokens[mode]} />
             </div>
@@ -547,7 +547,7 @@ function ThemeStudioDialogBody({
         </div>
 
         <div className="contents">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 md:col-start-2 md:row-start-1">
             <label
               htmlFor="theme-studio-name"
               className={cn(
@@ -571,7 +571,7 @@ function ThemeStudioDialogBody({
             />
           </div>
 
-          <div className="flex min-h-0 flex-col justify-center gap-1">
+          <div className="flex min-h-0 flex-col justify-center gap-1 md:col-start-2 md:row-start-2">
             {saveError || deleteError || renameError ? (
               <p className="truncate text-2xs text-destructive-text">
                 {saveError ?? deleteError ?? renameError}
@@ -606,7 +606,7 @@ function ThemeStudioDialogBody({
             ) : null}
           </div>
 
-          <div className="flex min-h-0 flex-col gap-2">
+          <div className="flex min-h-0 flex-col gap-2 md:col-start-2 md:row-start-3">
             <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
               {visibleTokens.map((token) => (
                 <ColorPicker
