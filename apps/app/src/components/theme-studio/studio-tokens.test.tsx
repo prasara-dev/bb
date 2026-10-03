@@ -320,7 +320,8 @@ describe("theme studio dialog", () => {
         onSave={vi.fn()}
         sources={[{ id: "nordish", name: "nordish", kind: "custom" }]}
         loadThemeCss={async () =>
-          ":root, .light {\n  --canvas: #abcdef;\n}\n.dark {\n  --canvas: #123456;\n}"}
+          ":root, .light {\n  --canvas: #abcdef;\n}\n.dark {\n  --canvas: #123456;\n}"
+        }
       />,
     );
 
@@ -385,6 +386,74 @@ describe("theme studio dialog", () => {
 
     await waitFor(() => expect(onRestore).toHaveBeenCalledWith("gone"));
     await waitFor(() => expect(loadThemeCss).toHaveBeenCalled());
+  });
+
+  it("shows the code theme editor for a custom theme under advanced tokens", async () => {
+    const { ThemeStudioDialog } = await import("./ThemeStudioDialog");
+    const readCodeTheme = vi.fn().mockResolvedValue({
+      dark: {
+        text: '{"name":"QA","type":"dark"}',
+        overriddenByManifest: false,
+        manifestValue: null,
+      },
+      light: {
+        text: null,
+        overriddenByManifest: false,
+        manifestValue: null,
+      },
+    });
+    render(
+      <ThemeStudioDialog
+        open
+        onOpenChange={vi.fn()}
+        onSave={vi.fn()}
+        sources={[{ id: "mine", name: "mine", kind: "custom" }]}
+        loadThemeCss={async () => ".dark { --canvas: #000; }"}
+        readCodeTheme={readCodeTheme}
+        writeCodeTheme={vi.fn()}
+      />,
+    );
+
+    await openSourceMenu(/new theme/i);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "mine" }));
+
+    expect(screen.queryByLabelText("Dark code theme JSON")).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /show advanced tokens/i }),
+    );
+
+    await waitFor(() => expect(readCodeTheme).toHaveBeenCalledWith("mine"));
+    expect(await screen.findByLabelText("Dark code theme JSON")).toBeTruthy();
+  });
+
+  it("explains why a base theme cannot carry a code theme", async () => {
+    const { ThemeStudioDialog } = await import("./ThemeStudioDialog");
+    render(
+      <ThemeStudioDialog
+        open
+        onOpenChange={vi.fn()}
+        onSave={vi.fn()}
+        sources={[{ id: "nord", name: "nord", kind: "builtin" }]}
+        loadThemeCss={async () => ".dark { --canvas: #000; }"}
+        readCodeTheme={vi.fn()}
+        writeCodeTheme={vi.fn()}
+      />,
+    );
+
+    await openSourceMenu(/new theme/i);
+    fireEvent.click(await screen.findByRole("menuitem", { name: /nord/i }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: /based on nord/i }),
+      ).toBeTruthy(),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /show advanced tokens/i }),
+    );
+
+    expect(screen.queryByLabelText("Dark code theme JSON")).toBeNull();
+    expect(screen.getByText(/borrow its colors/i)).toBeTruthy();
   });
 
   it("leaves no pointer-events lock on body after opening and closing", async () => {
